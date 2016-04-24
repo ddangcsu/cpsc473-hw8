@@ -12,12 +12,11 @@ var express = require("express"),
     // import the mongoose library
     mongoose = require("mongoose"),
     // import controller for ToDo
-    toDoController = require("./controllers/toDoController"),
-    // import socket IO
-    io = require("socket.io")();
+    Controller = require("./controllers/toDoController");
+
 
 // Attached IO to the server so that it can use the same IP/Port
-io.attach(server);
+Controller.init(server);
 
 app.use(express.static(__dirname + "/client"));
 // use body-parser for express 4+
@@ -26,9 +25,11 @@ app.use(parser.urlencoded({extended: true}));
 // connect to the amazeriffic data store in mongo
 mongoose.connect("mongodb://localhost/amazeriffic");
 
-app.get("/todos.json", toDoController.getAllToDos);
+// Create a middleware to emit
 
-app.post("/todos", toDoController.addToDo);
+app.get("/todos.json", Controller.ToDo.getAllToDos);
+
+app.post("/todos", Controller.ToDo.addToDo);
 
 // Start server here
 server.listen(3000);
