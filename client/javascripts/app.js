@@ -40,95 +40,145 @@ var main = function (toDoObjects) {
         return tagObjects;
     };
 
+    // Learn to factor the client from chapter 9
 
-    $(".tabs a span").toArray().forEach(function (element) {
-        var $element = $(element);
+    // Create a namespace for this app
+    var app = {};
 
-        // create a click handler for this element
-        $element.on("click", function () {
-            var $content,
-                i,
-                toDos = getToDos(toDoObjects);
+    // Define the newestTab information
+    app.newestTab = {
+        name: "Newest",
+        content: function (callback) {
+            var $content = $("<ul>");
+            var toDos = getToDos(toDoObjects);
+            toDos.forEach(function (todo) {
+                $content.prepend($("<li>").text(todo));
+            });
+            // Call back to handle with the content
+            callback($content);
+        },
+    };
+
+    // Define the oldestTab information
+    app.oldestTab = {
+        name: "Oldest",
+        content: function (callback) {
+            var $content = $("<ul>");
+            var toDos = getToDos(toDoObjects);
+            toDos.forEach(function (todo) {
+                $content.append($("<li>").text(todo));
+            });
+
+            callback($content);
+        },
+    };
+
+    // Define the tagsTab information
+    app.tagsTab = {
+        name: "Tags",
+        content: function (callback) {
+
+            var tagObjects = organizedByTags(toDoObjects);
+            var $tempContainer = $("<div>");
+
+            console.log(tagObjects);
+
+            tagObjects.forEach(function (tag) {
+                var $tagName = $("<h3>").text(tag.name),
+                    $content = $("<ul>");
+
+                tag.toDos.forEach(function (description) {
+                    var $li = $("<li>").text(description);
+                    $content.append($li);
+                });
+
+                // Append to the temporary container
+                $tempContainer.append($tagName);
+                $tempContainer.append($content);
+            });
+
+            // Return the HTML content of our temp container
+            callback($tempContainer.html());
+        },
+    };
+
+    // Define the addToDo Tab information
+    app.addTab = {
+        name: "Add",
+        content: function (callback) {
+            var $content = $("<div>"),
+                $input = $("<input>").addClass("description"),
+                $inputLabel = $("<p>").text("Description: "),
+                $tagInput = $("<input>").addClass("tags"),
+                $tagLabel = $("<p>").text("Tags: "),
+                $button = $("<span>").text("+");
+
+            $button.on("click", function () {
+                var description = $input.val(),
+                    // Use regexp to remove blank space
+                    tagsNoSpace = $tagInput.val().trim().replace(/\,\s*/g, ","),
+                    tags = tagsNoSpace.split(","),
+                    newToDo = {"description":description, "tags":tags};
+
+                // Request to add data to server
+                var request = $.post("todos", newToDo);
+
+                request.done(function (result) {
+                    // Request is done
+                    console.log(result);
+                    // Clear the input
+                    $input.val("");
+                    $tagInput.val("");
+                    // Redirect to first tab
+                    $(".tabs a:first-child span").trigger("click");
+                });
+
+                request.fail(function (result) {
+                    console.log("Something went wrong when adding Todo " + result);
+                });
+
+            });
+
+            $content.append($inputLabel)
+                    .append($input)
+                    .append($tagLabel)
+                    .append($tagInput)
+                    .append($button);
+
+            callback($content);
+        },
+    };
+
+    // Loop through to build the tabs.  Use lodash _.forOwn to loop through
+    _.forOwn(app, function (tab, key) {
+        console.log ("Building " + key);
+
+        var $tabs = $("main .tabs"),
+            $content = $("main .content"),
+            $aTag = $("<a>").attr("href", ""),
+            $spanTag = $("<span>").text(tab.name);
+
+        // Setup event when each spanTag is clicked
+        $spanTag.off().on("click", function (event) {
+            event.preventDefault();
 
             $(".tabs a span").removeClass("active");
-            $element.addClass("active");
-            $("main .content").empty();
+            $spanTag.addClass("active");
+            $content.empty();
 
-            if ($element.parent().is(":nth-child(1)")) {
-                $content = $("<ul>");
-                toDos.forEach(function (todo) {
-                    $content.prepend($("<li>").text(todo));
-                });
-            } else if ($element.parent().is(":nth-child(2)")) {
-                $content = $("<ul>");
-                toDos.forEach(function (todo) {
-                    $content.append($("<li>").text(todo));
-                });
+            tab.content( function (result) {
+                $content.append(result);
+            });
 
-            } else if ($element.parent().is(":nth-child(3)")) {
-
-                var tagObjects = organizedByTags(toDoObjects);
-
-                console.log(tagObjects);
-
-                tagObjects.forEach(function (tag) {
-                    var $tagName = $("<h3>").text(tag.name),
-                        $content = $("<ul>");
-
-                    tag.toDos.forEach(function (description) {
-                        var $li = $("<li>").text(description);
-                        $content.append($li);
-                    });
-
-                    $("main .content").append($tagName);
-                    $("main .content").append($content);
-                });
-
-            } else if ($element.parent().is(":nth-child(4)")) {
-                var $input = $("<input>").addClass("description"),
-                    $inputLabel = $("<p>").text("Description: "),
-                    $tagInput = $("<input>").addClass("tags"),
-                    $tagLabel = $("<p>").text("Tags: "),
-                    $button = $("<span>").text("+");
-
-                $button.on("click", function () {
-                    var description = $input.val(),
-                        // Use regexp to remove blank space
-                        tagsNoSpace = $tagInput.val().trim().replace(/\,\s*/g, ","),
-                        tags = tagsNoSpace.split(","),
-                        newToDo = {"description":description, "tags":tags};
-
-                    $.post("todos", newToDo, function (result) {
-                        console.log(result);
-
-                        //toDoObjects.push(newToDo);
-                        toDoObjects = result;
-
-                        // update toDos
-                        // toDos = toDoObjects.map(function (toDo) {
-                        //     return toDo.description;
-                        // });
-
-                        $input.val("");
-                        $tagInput.val("");
-
-                        $(".tabs a:first-child span").trigger("click");
-                    });
-                });
-
-                $content = $("<div>").append($inputLabel)
-                                     .append($input)
-                                     .append($tagLabel)
-                                     .append($tagInput)
-                                     .append($button);
-            }
-
-            $("main .content").append($content);
-
-            return false;
+            //return false;
         });
+
+        // Add them to the tabs
+        $tabs.append($aTag.append($spanTag));
+
     });
 
+    // Trigger it to go to the first tab on initialize
     $(".tabs a:first-child span").trigger("click");
 };
 
