@@ -81,7 +81,9 @@ var main = function (toDoObjects) {
 
                 $button.on("click", function () {
                     var description = $input.val(),
-                        tags = $tagInput.val().split(","),
+                        // Use regexp to remove blank space
+                        tagsNoSpace = $tagInput.val().trim().replace(/\,\s*/g, ","),
+                        tags = tagsNoSpace.split(","),
                         newToDo = {"description":description, "tags":tags};
 
                     $.post("todos", newToDo, function (result) {
