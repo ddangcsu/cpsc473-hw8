@@ -36,7 +36,7 @@ var Controller = {
 
     // Controller to add ToDo
     addToDo: function (req, res) {
-        console.log(req.body);
+        console.log("Information from post body: " + req.body);
         var newToDo = new ToDo({
             "description":req.body.description,
             "tags":req.body.tags
@@ -48,20 +48,9 @@ var Controller = {
                 console.log(err);
                 res.send("ERROR");
             } else {
-                // // our client expects *all* of the todo items to be returned, so we'll do
-                // // an additional request to maintain compatibility
-                // ToDo.find({}, function (err, result) {
-                //     if (err !== null) {
-                //         // the element did not get saved!
-                //         res.send("ERROR");
-                //     }
-                //     res.json(result);
-                // });
-
-                // We use SocketIO to emit a new todo message to all connected
-                // client
+                // Use SocketIO to notify client of newly added todo
                 console.log("Todo save result is: " + result);
-                io.broadcast.emit("new todo", result);
+                io.emit("new todo", result);
                 console.log("new todo message broadcast");
             }
         });
