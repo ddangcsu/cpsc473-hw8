@@ -41,7 +41,6 @@ var main = function (toDoObjects) {
     };
 
     // Learn to factor the client from chapter 9
-
     // Create a namespace for this app
     var app = {};
 
@@ -113,14 +112,16 @@ var main = function (toDoObjects) {
                 $tagLabel = $("<p>").text("Tags: "),
                 $button = $("<span>").text("+");
 
-            $button.on("click", function () {
+            // Add .off() to prevent when page reload that trigger multiple
+            // click event
+            $button.off().on("click", function () {
                 var description = $input.val(),
                     // Use regexp to remove blank space
                     tagsNoSpace = $tagInput.val().trim().replace(/\,\s*/g, ","),
                     tags = tagsNoSpace.split(","),
                     newToDo = {"description":description, "tags":tags};
 
-                // Request to add data to server
+                // Request to add data to server.  Use promise like in jQuery
                 var request = $.post("todos", newToDo);
 
                 request.done(function (result) {
