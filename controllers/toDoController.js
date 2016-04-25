@@ -11,21 +11,6 @@ unused: true, strict: true, trailing: true, node: true */
 var ToDo = require("../models/todos.js");
 var io = require("socket.io")();
 
-var attachSocketIO = function (server) {
-    console.log("Attach http server to socketIO to shared the same port");
-    io.attach(server);
-
-    // Create some logging for socket io
-    console.log("Setup handler for IO to listen on connection");
-    io.on("connection", function (socket) {
-        console.log(" Client connected " + socket.id);
-
-        socket.on("disconnect", function (socket) {
-            console.log (" Client " + socket.id + " disconnected");
-        });
-    });
-};
-
 var Controller = {
     // Controller to search and return toDo JSON Object from Mongoose
     getAllToDos: function (req, res) {
@@ -56,6 +41,45 @@ var Controller = {
             }
         });
     },
+};
+
+var attachSocketIO = function (server) {
+    console.log("Attach http server to socketIO to shared the same port");
+    io.attach(server);
+
+    // Create some logging for socket io
+    console.log("Setup handler for IO to listen on connection");
+    io.on("connection", function (socket) {
+        console.log(" Client connected " + socket.id);
+
+        socket.on("disconnect", function (socket) {
+            console.log (" Client " + socket.id + " disconnected");
+        });
+
+        // Handle new add via socketIO
+        socket.on("new todo", function (payload) {
+            console.log("Recieved payload from client " + socket.id + " : " + payload);
+            var newToDo = new ToDo(payload);
+
+            newToDo.save(function (err, result) {
+                if (err !== null) {
+                    // the element did not get saved!
+                    console.log(err);
+                } else {
+                    if (result) {
+                        // Use SocketIO to notify client of newly added todo
+                        console.log("Todo save result is: " + result);
+                        io.emit("new todo", payload);
+                        console.log("Broadcasted to all clients of new todo");
+
+                    } else {
+                        console.log("Something odd happen with result as its empty");
+                    }
+                }
+            });
+
+        });
+    });
 };
 
 module.exports.init = attachSocketIO;

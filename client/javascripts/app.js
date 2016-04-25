@@ -8,6 +8,10 @@ var main = function (toDoObjects) {
     "use strict";
     console.log("SANITY CHECK");
 
+    // define the client socketIO
+    var client,
+        connected;
+
     // Turn the normal map into a function to return the array of description
     var getToDos = function (jsonObject) {
         var toDos = jsonObject.map(function (toDo) {
@@ -129,22 +133,15 @@ var main = function (toDoObjects) {
                     tags = tagsNoSpace.split(","),
                     newToDo = {"description":description, "tags":tags};
 
-                // Request to add data to server.  Use promise like in jQuery
-                var request = $.post("todos", newToDo);
-
-                request.done(function (result) {
-                    // Request is done
-                    console.log(result);
-                    // Clear the input
+                // We will use socket IO to emit add todo to server
+                if (connected) {
+                    client.emit("new todo", newToDo);
                     $input.val("");
                     $tagInput.val("");
-                    // Redirect to first tab
                     $(".tabs a:first-child span").trigger("click");
-                });
-
-                request.fail(function (result) {
-                    console.log("Something went wrong when adding Todo " + result);
-                });
+                } else {
+                    console.log("ERROR: client is not connected");
+                }
 
             });
 
@@ -188,12 +185,14 @@ var main = function (toDoObjects) {
 
     });
 
+    // Function to deal with
     var realTimeToDo = function () {
-        // We connect to the server
-        var client = io();
+        // We connect to the same server as the application
+        client = io();
 
         // Setup events handling only after client connected
         client.on("connect", function () {
+            connected = true;
             console.log("Client connected to server");
 
             // Handle when client disconnect
@@ -201,23 +200,19 @@ var main = function (toDoObjects) {
                 console.log("Client disconnected from server");
                 // We close the client connection
                 client.close();
+                connected = false;
             });
 
             // Handle new todo event
             client.on("new todo", function (payload) {
                 console.log("A New Todo added: " + payload);
-                var toDo = {
-                    description: payload.description,
-                    tags: payload.tags
-                };
+                // We add it to the todoObjects
+                toDoObjects.push(payload);
 
                 // Determine the current tab
                 var $currentTab = $(".tabs span.active"),
                     $content = $("main .content"),
                     tabKey = $currentTab.attr("name");
-
-                // We add it to the todoObjects
-                toDoObjects.push(toDo);
 
                 if (tabKey === undefined) {
                     console.log("Bad tabKey. Check code");
@@ -234,7 +229,6 @@ var main = function (toDoObjects) {
 
             });
         });
-
     };
 
     // Run realtime ToDo function to setup socket IO connection and events
