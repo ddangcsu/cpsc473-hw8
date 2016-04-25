@@ -1,3 +1,9 @@
+// Client-side code
+/* jshint browser: true, jquery: true, curly: true, eqeqeq: true, forin: true,
+immed: true, indent: 4, latedef: true, newcap: true, nonew: true, quotmark: double,
+undef: true, unused: true, strict: true, trailing: true */
+/* global console: true, io: true, _: true*/
+
 var main = function (toDoObjects) {
     "use strict";
     console.log("SANITY CHECK");
@@ -78,7 +84,7 @@ var main = function (toDoObjects) {
         content: function (callback) {
 
             var tagObjects = organizedByTags(toDoObjects);
-            var $tempContainer = $("<div>");
+            var $container = $("<div>");
 
             console.log(tagObjects);
 
@@ -92,12 +98,14 @@ var main = function (toDoObjects) {
                 });
 
                 // Append to the temporary container
-                $tempContainer.append($tagName);
-                $tempContainer.append($content);
+                $container.append($tagName);
+                $container.append($content);
             });
 
             // Return the HTML content of our temp container
-            callback($tempContainer.html());
+            // callback($tempContainer.html());
+            // We return the the content including the temp container
+            callback($container);
         },
     };
 
@@ -157,7 +165,7 @@ var main = function (toDoObjects) {
         var $tabs = $("main .tabs"),
             $content = $("main .content"),
             $aTag = $("<a>").attr("href", ""),
-            $spanTag = $("<span>").text(tab.name);
+            $spanTag = $("<span>").text(tab.name).attr("name", key);
 
         // Setup event when each spanTag is clicked
         $spanTag.off().on("click", function (event) {
@@ -167,6 +175,7 @@ var main = function (toDoObjects) {
             $spanTag.addClass("active");
             $content.empty();
 
+            // Update the tab content
             tab.content( function (result) {
                 $content.append(result);
             });
@@ -179,11 +188,61 @@ var main = function (toDoObjects) {
 
     });
 
+    var realTimeToDo = function () {
+        // We connect to the server
+        var client = io();
+
+        // Setup events handling only after client connected
+        client.on("connect", function () {
+            console.log("Client connected to server");
+
+            // Handle when client disconnect
+            client.on("disconnect", function() {
+                console.log("Client disconnected from server");
+                // We close the client connection
+                client.close();
+            });
+
+            // Handle new todo event
+            client.on("new todo", function (payload) {
+                console.log("A New Todo added: " + payload);
+                var toDo = {
+                    description: payload.description,
+                    tags: payload.tags
+                };
+
+                // Determine the current tab
+                var $currentTab = $(".tabs span.active"),
+                    $content = $("main .content"),
+                    tabKey = $currentTab.attr("name");
+
+                // We add it to the todoObjects
+                toDoObjects.push(toDo);
+
+                // Update the tab content as long as it's not the add Tab
+                if (tabKey !== "addTab") {
+                    app[tabKey].content(function (content) {
+                        content.hide();
+                        $content.empty();
+                        $content.append(content);
+                        content.slideDown(400);
+                    });
+                }
+
+            });
+        });
+
+    };
+
+    // Run realtime ToDo function to setup socket IO connection and events
+    realTimeToDo();
+
     // Trigger it to go to the first tab on initialize
     $(".tabs a:first-child span").trigger("click");
 };
 
 $(document).ready(function () {
+    "use strict";
     $.getJSON("todos.json", function (toDoObjects) {
         main(toDoObjects);
     });

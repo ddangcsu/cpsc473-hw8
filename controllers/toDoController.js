@@ -48,11 +48,11 @@ var Controller = {
                 console.log(err);
                 res.send("ERROR");
             } else {
+                res.send("SUCCESS");
                 // Use SocketIO to notify client of newly added todo
                 console.log("Todo save result is: " + result);
                 io.emit("new todo", result);
                 console.log("new todo message broadcast");
-                res.end("SUCCESS");
             }
         });
     },
