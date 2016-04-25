@@ -219,14 +219,17 @@ var main = function (toDoObjects) {
                 // We add it to the todoObjects
                 toDoObjects.push(toDo);
 
-                // Update the tab content as long as it's not the add Tab
-                if (tabKey !== "addTab") {
+                if (tabKey === undefined) {
+                    console.log("Bad tabKey. Check code");
+
+                } else if (tabKey !== "addTab") {
                     app[tabKey].content(function (content) {
                         content.hide();
                         $content.empty();
                         $content.append(content);
-                        content.slideDown(400);
+                        content.slideDown(200);
                     });
+
                 }
 
             });
